@@ -3,7 +3,7 @@ const OpenAI = require("openai");
 const app = express();
 app.use(express.json());
 
-const key = "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";
+const key = "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";
 const openai = new OpenAI({ apiKey: key });
 
 app.post("/generate-image", async (req, res) => {

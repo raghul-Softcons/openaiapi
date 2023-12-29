@@ -5,7 +5,7 @@ const app = express();
 app.use(express.json());
 app.use(cors()); // Use the cors middleware
 
-const key = "";
+const key = "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";
 
 const openai = new OpenAI({
   apiKey: key,
