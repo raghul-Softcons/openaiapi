@@ -124,7 +124,8 @@
     "yallist": "^4.0.0"
   },
   "scripts": {
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "start": "concurrently \"python3 main.py\" \"node gemini.js\""    
   },
   "author": "",
   "license": "ISC"

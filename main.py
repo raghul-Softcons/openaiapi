@@ -4,7 +4,6 @@ from sklearn.linear_model import PassiveAggressiveClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 import pandas as pd
-
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -24,7 +23,6 @@ X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.15, random
 # Load the trained model
 model = make_pipeline(TfidfVectorizer(stop_words='english'), PassiveAggressiveClassifier())
 model.fit(X_train, y_train)
-
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
