@@ -2,6 +2,7 @@ const express = require('express');
 const admin = require('firebase-admin');
 const nodemailer = require("nodemailer");
 const jwt = require("jsonwebtoken");
+const cors = require('cors')
 
 
 // Replace the path to your Firebase project's private key JSON file
@@ -20,94 +21,67 @@ app.use(express.json());
 
 ////////////////////////////////////////////////////// 1.
 
-// Define a route for adding a document to Firestore
-app.post('/addUser', (req, res) => {
-  const { first_name, Last_name, mail_id, Mobile_no} = req.body;
-//  console.log(first_name);
-//   if (!first_name || !mail_id || !Last_name) {
-//     return res.status(400).json({ error: 'Name and email are required fields' });
-//   }
-
-  const db = admin.firestore();
-  const collectionRef = db.collection('user_table')
-
-  const userData = {
-    first_name,
-    Last_name,
-    mail_id,
-    Mobile_no,
-  }
-
-  collectionRef.add(userData)
-    .then(() => {
-      console.log('Document successfully written!');
-      res.status(200).json({ message: 'Document successfully written!' });
-    })
-    .catch((error) => {
-      console.error('Error writing document: ', error);
-      res.status(500).json({ error: 'Internal Server Error' });
-    });
-});
-
-/////////////////////////////////////// 2.
-
-
-app.post('/sendotp', (req, res) => {
-  const { mail_id } = req.body;
-  const db = admin.firestore();
-  const collectionRef = db.collection('user_table');
-
-  // Perform a query to check if the mail_id exists in the 'email' field
-  collectionRef.where('mail_id', '==', mail_id).get()
-    .then(snapshot => {
-      if (snapshot.empty) {
-        // No matching document found, the mail_id does not exist
-        res.status(404).json({ message: 'Mail ID not found in the database' });
-      } else {
-        // Generate a random 6-digit OTP
+app.post('/signup1', async (req, res) => {
+  try {
+    const { mail_id } = req.body;
+    const db = admin.firestore();
+    const otpCollectionRef = db.collection('OTP_table');
     const otp = generateOTP(6);
-    console.log(otp, "OTP"); 
-    //const userDoc = snapshot.docs[0].data();
-    const docRef = collectionRef.doc(snapshot.docs[0].id);
-         docRef.update({
-          OTP: otp
-        });  
+    const userData = {
+      mail_id,
+      otp     
+    }  
+    otpCollectionRef.add(userData)
+    sendmail(mail_id,otp)
+    return res.json({message:'OTP Sent'})
+  }  catch (error) {
+    console.error('Error signing in:', error);
+    return res.status(500).json({ error: 'Internal server error OTP not sent' });
+  }  
+})  
+////////////////////////////////////////2.
 
-    const transporter = nodemailer.createTransport({
-        service: "Gmail",
-        auth: {
-            user: "appstore@softcons.com",
-            pass: "iwqthpotdqadkaaz",
-        },
-    });
+app.post('/signup2', async (req, res) => {
+  try {
+    const { mail_id, otp, first_name, Last_name, Mobile_no } = req.body;
 
-    // Email content
-    const mailOptions = {
-        from: "appstore@softcons.com",
-        to: "raghul.a1710@gmail.com",
-        subject: "OTP Verification",
-        text: `Your OTP is: ${otp}`,
-    };
+    const db = admin.firestore();
+    const otpCollectionRef = db.collection('OTP_table');
+    const userCollectionRef = db.collection('user_table');
+  
+    // Use where method to query based on mail_id in 'OTP_table'
+    const querySnapshot = await otpCollectionRef.where('mail_id', '==', mail_id).get();
 
-    // Send the email
-    transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-            console.error("Error sending OTP email:", error);
-            return res.status(StatusCodes.InternalServerError).json("Error sending OTP email");
-        } else {
-            console.log("OTP email sent:", info.response);
-            return res.json("OTP sent successfully");
-        }   
-    });
+    // Check if there are any matching documents in 'OTP_table'
+    if (querySnapshot.empty) {
+      return res.status(404).json({ error: 'User not found' });
+    } else {
+      const inf = querySnapshot.docs[0].data();
+      const userotp = inf.otp;
+      console.log("UserOtp", userotp);
+
+      if (otp == userotp) {
+        const verification_status = true;
+        const userData = {
+          first_name,
+          Last_name,
+          mail_id,
+          Mobile_no,
+          verification_status
+        }
+        // Update verification_status in 'user_table'
+        userCollectionRef.add(userData)          
+          return res.status(200).json({ message: 'VALID OTP!!' });         
+      } else {
+        console.error('INVALID OTP');
+        return res.status(500).json({ error: 'INVALID OTP' });
+      }
+    }
+  } catch (error) {
+    console.error('Error signing in:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
-    })
-    .catch(error => {
-      // Handle any errors that occurred during the query
-      console.error('Error getting documents', error);
-      res.status(500).json({ error: 'Internal server error' });
-    });
 });
-
 
 
 /////////////////////////////////////////// 3.
@@ -135,39 +109,47 @@ app.post('/signin', async (req, res) => {
     const first_name = userDoc.first_name
     const last_name = userDoc.last_name
     const mobile_no = userDoc.Mobile_no
-    
+    const status = userDoc.verification_status
 
-    // Verify the user's credentials (e.g., comparing OTP)
-    if(otp == OTP){
+    if(status == true){   
 
-    // Create a payload to sign with a token
-    const payload = {
-        mail_id,
-        first_name,
-        last_name,
-        OTP,
-        mobile_no,      
-    };
+              // Verify the user's credentials (e.g., comparing OTP)
+              if(otp == OTP){
 
-    // Sign the payload with a token
-    const token = jwt.sign(payload, jwtSecret);
+              // Create a payload to sign with a token
+              const payload = {
+                  mail_id,
+                  first_name,
+                  last_name,
+                  OTP,
+                  mobile_no,      
+              };
 
-    // Send the token in the headers
-    res.header('Authorization', `Bearer ${token}`);
+              // Sign the payload with a token
+              const token = jwt.sign(payload, jwtSecret);
 
-    // You can also set the token in a cookie if you prefer
-    // res.cookie('token', token, { httpOnly: true });
+              // Send the token in the headers
+              res.header('Authorization', `Bearer ${token}`);
 
-    // Send a success response without including the token in the body
-    return res.json({ user: userDoc });
-  }else{
-    return res.json({ error: 'Invalid OTP' });
-  }  
+              // You can also set the token in a cookie if you prefer
+              // res.cookie('token', token, { httpOnly: true });
+
+              // Send a success response without including the token in the body
+              return res.json({ user: userDoc });
+            }else{
+              return res.json({ error: 'Invalid OTP' });
+            }  
+          }else{
+            return res.status({ mesage: 'Not a verified user'})
+          }        
   } catch (error) {
     console.error('Error signing in:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
+
+
+////////////////////// Function to generate OTP
 
 function generateOTP(length) {
   const charset = "0123456789";
@@ -179,8 +161,42 @@ function generateOTP(length) {
   return otp;
 }
 
+////////////////////// Function to send mail
+
+
+function sendmail(mail_id,otp){
+
+  // const otp = generateOTP(6);
+  //     console.log(otp, "OTP"); 
+      //const userDoc = snapshot.docs[0].data();
+      // const docRef = collectionRef.doc(snapshot.docs[0].id);
+      //     docRef.update({
+      //       OTP: otp
+      //     });  
+
+      const transporter = nodemailer.createTransport({
+          service: "Gmail",
+          auth: {
+              user: "appstore@softcons.com",
+              pass: "iwqthpotdqadkaaz",
+          },
+      });
+
+      // Email content
+      const mailOptions = {
+          from: "appstore@softcons.com",
+          to: "raghul.a1710@gmail.com",
+          subject: "OTP Verification",
+          text: `Your OTP is: ${otp}`,
+      };
+
+    transporter.sendMail(mailOptions);
+
+  }    
+
 
 // Start the Express server
 app.listen(port, () => {
   console.log(`Server is running at http://localhost:${port}`);
 });
+
