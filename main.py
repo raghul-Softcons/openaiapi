@@ -3,12 +3,12 @@ from sklearn.pipeline import make_pipeline
 from sklearn.linear_model import PassiveAggressiveClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
-import pandas as pd
 from flask_cors import CORS
+import google.generativeai as genai
+import pandas as pd
 
 app = Flask(__name__)
 CORS(app)
-
 
 # Load your dataset (replace 'your_dataset.csv' with your actual dataset file)
 data = pd.read_csv('/Users/sreelakshmi/Desktop/Raghul/ML API/Creme data copy 3 Supersede dataset.csv', encoding='latin1')
@@ -23,6 +23,11 @@ X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.15, random
 # Load the trained model
 model = make_pipeline(TfidfVectorizer(stop_words='english'), PassiveAggressiveClassifier())
 model.fit(X_train, y_train)
+
+# Access your API key as an environment variable
+api_key = "AIzaSyBXKKqql55PMGHSwWDiuoSmVNpAYiQ4W3c"
+genai.configure(api_key = api_key)
+
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
@@ -32,6 +37,20 @@ def predict():
         return jsonify({'prediction': predicted_label})
     except Exception as e:
         return jsonify({'error': str(e)})
-if __name__ == '__main__':
+
+@app.route("/generateContent", methods=['POST'])
+
+def generate_content():
+    try:
+        model = genai.GenerativeModel('gemini-pro')
+        prompt = request.json["prompt"]        
+        response = model.generate_content(prompt) 
+        text = response.text        
+        return jsonify({"result": text})
+    except Exception as error:
+        print("Error generating content:", error)
+        return jsonify({"error": str(error)}), 500
+
+if __name__ == "__main__":
     print('Running in port 3333')
     app.run(port=3333)

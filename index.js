@@ -5,6 +5,7 @@ const app = express();
 app.use(express.json());
 app.use(cors()); // Use the cors middleware
 
+
 const key = "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";
 
 const openai = new OpenAI({
@@ -96,6 +97,9 @@ app.post("/generate-image", async (req, res) => {
     });
   }
 });
+
+
+
 
 const port = 9871;
 app.listen(port, () => console.log("Server is running on port", port));
