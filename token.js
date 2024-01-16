@@ -6,19 +6,16 @@ const publicKEY = fs.readFileSync("./public.key", "utf8");
 
 const signToken = (payload, option) => {
   const defPayload = {
-    user_id: payload.user_id,
     first_name: payload.first_name,
-    role_id: payload.role_id,
     email_id: payload.email_id,
-    mobile_no: payload.mobile_no,
-    status: payload.status,
+    Last_name: payload.Last_name
   };
 
   const signOptions = {
     algorithm: "RS256",
     audience: option.audience,
     expiresIn: "7d",
-    issuer: "Scoo",
+    issuer: "Supersede",
   };
 
   const res = jwt.sign(defPayload, privateKEY, signOptions);

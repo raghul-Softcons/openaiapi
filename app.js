@@ -4,6 +4,8 @@ const nodemailer = require("nodemailer");
 const jwt = require("jsonwebtoken");
 const cors = require('cors')
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const TokenManager = require("./token");
+
 
 
 // Replace the path to your Firebase project's private key JSON file
@@ -31,6 +33,7 @@ app.post("/generateContent", async (req, res) => {
     const prompt = req.body.prompt;
 
     const result = await model.generateContent(prompt);
+
     const response = await result.response;
     const text = response.text();
 
@@ -173,8 +176,6 @@ app.post('/signin1', async (req, res) => {
 
 ///////////////////////////////////////////////4.
 
-const jwtSecret = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
-
 app.post('/signin2', async (req, res) => {
   try {
     const { mail_id, otp } = req.body;
@@ -207,24 +208,28 @@ app.post('/signin2', async (req, res) => {
       const userotp = SigninCollectionRef.docs[0].data();
       const actualOTP = userotp.otp;
       console.log("Actual OTP", actualOTP);
-      console.log("Actual OTP", mail_id);
+      console.log("Actual OTP", mail_id);      
 
       // Verify the user's credentials (e.g., comparing OTP)
       if (otp == actualOTP) {
         // Create a payload to sign with a token
-        const payload = {
+        const payloadd = {
           mail_id,
           first_name: userDoc.first_name,
-          last_name: userDoc.last_name,
-          OTP: actualOTP,
-          mobile_no: userDoc.Mobile_no,
+          Last_name: userDoc.Last_name,
+          mobile_no: userDoc.Mobile_no
         };
 
         // Sign the payload with a token
-        const token = jwt.sign(payload, jwtSecret);
-
+        const token = TokenManager.signToken(payloadd, { audience: 'your-audience' });
         // Send the token in the headers
         res.header('Authorization', `Bearer ${token}`);
+        const token2 = `Bearer ${token}`;
+        console.log("Token:", token2);
+
+        const dec = TokenManager.decodeToken(token2)
+        console.log(dec);
+
 
         // Send a success response without including the token in the body
         return res.json({ user: userDoc });
