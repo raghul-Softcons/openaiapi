@@ -127,7 +127,7 @@
   },
   "scripts": {
     "dev": "nodemon index.js",
-    "start": "concurrently \"python3 main.py\" \"node gemini.js\" \"node app.js\""
+    "start": "concurrently \"python3 main.py\" \"node app.js\""
   },
   "author": "",
   "license": "ISC"
