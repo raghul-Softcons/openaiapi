@@ -22,10 +22,9 @@ const genAI = new GoogleGenerativeAI(apiKey);
 const app = express();
 const port = 3000;
 
-// Middleware to parse JSON in the request body
 app.use(express.json());
 
-//////////////////////////////////////////////////////0.
+// GEMINI API
 
 app.post("/generateContent", async (req, res) => {
   try {
@@ -44,9 +43,9 @@ app.post("/generateContent", async (req, res) => {
   }
 });
 
-////////////////////////////////////////////////////// 1.
+// Signup using Mailid
 
-app.post('/signup1', async (req, res) => {
+app.post('/signup', async (req, res) => {
   try {
     const { mail_id } = req.body;
     const db = admin.firestore();
@@ -79,11 +78,11 @@ app.post('/signup1', async (req, res) => {
   }
 });
  
-////////////////////////////////////////2.
+// Signup Screen {OTP along with user details}
 
-app.post('/signup2', async (req, res) => {
+app.post('/signupotp', async (req, res) => {
   try {
-    const { mail_id, otp, first_name, Last_name, Mobile_no } = req.body;
+    const { mail_id, otp, first_name, Last_name, Mobile_no, User_id } = req.body;
 
     const db = admin.firestore();
     const otpCollectionRef = db.collection('OTP_table');
@@ -111,7 +110,8 @@ app.post('/signup2', async (req, res) => {
           Last_name,
           mail_id,
           Mobile_no,
-          verification_status
+          verification_status,
+          User_id
         }
         // Update verification_status in 'user_table'
         userCollectionRef.add(userData)          
@@ -128,7 +128,7 @@ app.post('/signup2', async (req, res) => {
 });
 
 
-/////////////////////////////////////////// 3.
+// Signin using Mailid
 
 app.post('/signin1', async (req, res) => {
   try {
@@ -174,9 +174,9 @@ app.post('/signin1', async (req, res) => {
   }
 });
 
-///////////////////////////////////////////////4.
+// Signin with OTP
 
-app.post('/signin2', async (req, res) => {
+app.post('/signinotp', async (req, res) => {
   try {
     const { mail_id, otp } = req.body;
 
@@ -217,22 +217,27 @@ app.post('/signin2', async (req, res) => {
           mail_id,
           first_name: userDoc.first_name,
           Last_name: userDoc.Last_name,
-          mobile_no: userDoc.Mobile_no
+          User_id: userDoc.User_id
         };
 
         // Sign the payload with a token
         const token = TokenManager.signToken(payloadd, { audience: 'your-audience' });
         // Send the token in the headers
         res.header('Authorization', `Bearer ${token}`);
-        const token2 = `Bearer ${token}`;
-        console.log("Token:", token2);
+        const generated_token = `Bearer ${token}`;
+        console.log("Token:", generated_token);
 
-        const dec = TokenManager.decodeToken(token2)
+        const dec = TokenManager.decodeToken(generated_token)
         console.log(dec);
+
+        const response = {
+          generated_token,
+          userDoc
+        }
 
 
         // Send a success response without including the token in the body
-        return res.json({ user: userDoc });
+        return res.json(response);
       } else {
         return res.json({ error: 'Invalid OTP' });
       }
@@ -245,8 +250,43 @@ app.post('/signin2', async (req, res) => {
   }
 });
 
+app.post('/tokenverify', async (req, res) => {
+  try {
+    const token = req.get('val'); 
+    console.log(token);
 
-////////////////////// Function to generate OTP
+    if (!token) {
+      return res.status(401).json({ error: 'Authorization token is missing' });
+    }
+
+    const decodedToken = TokenManager.decodeToken(token);
+    const mail = decodedToken.payload.email_id;
+    const first_name = decodedToken.payload.first_name;
+    const Last_name = decodedToken.payload.Last_name;
+    const User_id = decodedToken.payload.User__id;
+
+    const Userdata = {
+      mail,first_name,Last_name,User_id
+    }
+
+    console.log("Mail", mail);
+    console.log(decodedToken);
+    const db = admin.firestore();
+    const userCollectionRef = db.collection('user_table');
+    const querySnapshot1 = await userCollectionRef.where('mail_id', '==', mail).get();
+    if (querySnapshot1.empty) {
+      // If documents exist, it means the mail_id is already in the database
+      return res.json({ error: 'User never exists' });
+    }else{
+    res.status(200).json(Userdata);
+  }
+} catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// OTP Generation
 
 function generateOTP(length) {
   const charset = "0123456789";
@@ -258,20 +298,12 @@ function generateOTP(length) {
   return otp;
 }
 
-////////////////////// Function to send mail
+// Sending mail through Nodemailer
 
 
 function sendmail(mail_id,otp){
 
-  // const otp = generateOTP(6);
-  //     console.log(otp, "OTP"); 
-      //const userDoc = snapshot.docs[0].data();
-      // const docRef = collectionRef.doc(snapshot.docs[0].id);
-      //     docRef.update({
-      //       OTP: otp
-      //     });  
-
-      const transporter = nodemailer.createTransport({
+        const transporter = nodemailer.createTransport({
           service: "Gmail",
           auth: {
               user: "appstore@softcons.com",

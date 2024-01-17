@@ -7,8 +7,9 @@ const publicKEY = fs.readFileSync("./public.key", "utf8");
 const signToken = (payload, option) => {
   const defPayload = {
     first_name: payload.first_name,
-    email_id: payload.email_id,
-    Last_name: payload.Last_name
+    email_id: payload.mail_id,
+    Last_name: payload.Last_name,
+    User__id: payload.User_id
   };
 
   const signOptions = {

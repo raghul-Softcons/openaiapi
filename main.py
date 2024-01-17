@@ -11,7 +11,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Load your dataset (replace 'your_dataset.csv' with your actual dataset file)
-data = pd.read_csv('/Users/sreelakshmi/Desktop/Raghul/ML API/Creme data copy 3 Supersede dataset.csv', encoding='latin1')
+data = pd.read_csv('/Users/sreelakshmi/Desktop/Raghul/openaiapi/Creme data copy 3 Supersede dataset.csv', encoding='latin1')
 
 # Data preprocessing
 data = data.sample(frac=1).reset_index(drop=True)
