@@ -23,6 +23,7 @@ const app = express();
 const port = 3000;
 
 app.use(express.json());
+app.use(cors());
 
 // GEMINI API
 
@@ -50,33 +51,41 @@ app.post('/signup', async (req, res) => {
     const { mail_id } = req.body;
     const db = admin.firestore();
     const otpCollectionRef = db.collection('OTP_table');
-    const otp = generateOTP(6);
+    const Usertable = db.collection('user_table');
+    const query = await Usertable.where('mail_id', '==', mail_id).get();
 
-    const querySnapshot = await otpCollectionRef.where('mail_id', '==', mail_id).get();
+    if(query.empty){
 
-    if (querySnapshot.empty) {
-      // If no document exists, add a new one
-      const userData = {
-        mail_id,
-        otp,
-      };
-      await otpCollectionRef.add(userData);
-    } else {
-      // If document exists, update the existing one
-      const existingDocId = querySnapshot.docs[0].id;
-      const userData = {
-        mail_id,
-        otp,
-      };
-      await otpCollectionRef.doc(existingDocId).set(userData);
-    }    
-    sendmail(mail_id, otp);
-    return res.json({ message: 'OTP Sent' });
-  } catch (error) {
-    console.error('Error signing in:', error);
-    return res.status(500).json({ error: 'Internal server error OTP not sent' });
-  }
-});
+        const otp = generateOTP(6);
+
+        const querySnapshot = await otpCollectionRef.where('mail_id', '==', mail_id).get();
+
+        if (querySnapshot.empty) {
+          // If no document exists, add a new one
+          const userData = {
+            mail_id,
+            otp,
+          };
+          await otpCollectionRef.add(userData);
+        } else {
+          // If document exists, update the existing one
+          const existingDocId = querySnapshot.docs[0].id;
+          const userData = {
+            mail_id,
+            otp,
+          };
+          await otpCollectionRef.doc(existingDocId).set(userData);
+        }    
+        sendmail(mail_id, otp);
+        return res.json({ message: 'OTP Sent' });
+      }else{
+        return res.json({ error: 'User already exists'});
+      }
+    }catch (error) {
+          console.error('Error signing in:', error);
+          return res.status(500).json({ error: 'Internal server error OTP not sent' });
+        }
+      });
  
 // Signup Screen {OTP along with user details}
 
@@ -314,7 +323,7 @@ function sendmail(mail_id,otp){
       // Email content
       const mailOptions = {
           from: "appstore@softcons.com",
-          to: "raghul.a1710@gmail.com",
+          to: mail_id,
           subject: "OTP Verification",
           text: `Your OTP is: ${otp}`,
       };
