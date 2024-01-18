@@ -233,7 +233,7 @@ app.post('/signinotp', async (req, res) => {
         const token = TokenManager.signToken(payloadd, { audience: 'your-audience' });
         // Send the token in the headers
         res.header('Authorization', `Bearer ${token}`);
-        const generated_token = `Bearer ${token}`;
+        const generated_token = token;
         console.log("Token:", generated_token);
 
         const dec = TokenManager.decodeToken(generated_token)
