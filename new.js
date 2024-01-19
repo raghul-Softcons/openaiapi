@@ -9,19 +9,18 @@ const TokenManager = require("./token");
 
 
 // Replace the path to your Firebase project's private key JSON file
-const serviceAccount = require('./angularfsdev-firebase-adminsdk-qaq4n-b96b1f08c8.json');
-const { message } = require('statuses');
+const serviceAccount = require('./howtotalktomyaiui-2eaaa365ea88.json');
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  databaseURL: 'https://console.firebase.google.com/u/5/project/angularfsdev/' // Replace with your Firebase project's database URL
+  projectId: 'howtotalktomyaiui' // Replace with your Firebase project's database URL
 });
 
 const apiKey = "AIzaSyBXKKqql55PMGHSwWDiuoSmVNpAYiQ4W3c"; 
 const genAI = new GoogleGenerativeAI(apiKey);
 
 const app = express();
-const port = 3000;
+const port = 4000;
 
 app.use(express.json());
 app.use(cors());
@@ -49,14 +48,18 @@ app.post("/generateContent", async (req, res) => {
 
 app.post('/signup', async (req, res) => {
   try {
+    console.log("req.body",req.body);
     const { mail_id } = req.body;
     const db = admin.firestore();
+   // console.log("db",db);
     const otpCollectionRef = db.collection('OTP_table');
+  
     const Usertable = db.collection('user_table');
+    console.log("Usertable",Usertable);
     const query = await Usertable.where('mail_id', '==', mail_id).get();
-
+    console.log("query",query);
     if(query.empty){
-
+      console.log("query if");
         const otp = generateOTP(6);
 
         const querySnapshot = await otpCollectionRef.where('mail_id', '==', mail_id).get();
@@ -234,7 +237,7 @@ app.post('/signinotp', async (req, res) => {
         const token = TokenManager.signToken(payloadd, { audience: 'your-audience' });
         // Send the token in the headers
         res.header('Authorization', `Bearer ${token}`);
-        const generated_token = token;
+        const generated_token = `Bearer ${token}`;
         console.log("Token:", generated_token);
 
         const dec = TokenManager.decodeToken(generated_token)
@@ -262,14 +265,8 @@ app.post('/signinotp', async (req, res) => {
 
 app.post('/tokenverify', async (req, res) => {
   try {
-
-    const authorizationHeader = req.headers.authorization;
-    console.log('authorizationHeader',authorizationHeader);
-    if (!authorizationHeader){
-      return res.status(401).json({ error: 'Authorization token is missing or invalid' });
-    }
-    const token = authorizationHeader;
-    //console.log(token);
+    const token = req.get('val'); 
+    console.log(token);
 
     if (!token) {
       return res.status(401).json({ error: 'Authorization token is missing' });
@@ -300,64 +297,6 @@ app.post('/tokenverify', async (req, res) => {
     console.error('Error:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
-});
-app.post('/addprompt',async(req,res) =>{
-
-      try
-      {
-
-        const authorizationHeader = req.headers.authorization;
-        console.log('authorizationHeader',authorizationHeader);
-        if (!authorizationHeader){
-          return res.status(401).json({ error: 'Authorization token is missing or invalid' });
-        }
-        const token = authorizationHeader;
-        const {Bot, Brand, Category, Questions, Search_parameters, Title} = req.body;
-        //console.log("$$$$$$$$$$",token);
-        if (!token){
-          return res.status(401).json({ error: 'Authorization token is missing' });
-        }
-        else{  
-              const decodedToken = TokenManager.decodeToken(token);
-              const mail_id = decodedToken.payload.email_id;
-              const first_name = decodedToken.payload.first_name;
-              const Last_name = decodedToken.payload.Last_name;
-              const User_id = decodedToken.payload.User__id;
-
-              if(User_id === '1'){
-
-                  const Userdata = {
-                    mail_id,first_name,Last_name,User_id
-                  }
-
-                  console.log("Mail", mail_id);
-                  console.log("Mail", User_id);
-                  console.log(decodedToken);
-                  const db = admin.firestore();
-                  const userCollectionRef = db.collection('user_table');
-                  const querySnapshot1 = await userCollectionRef.where('mail_id', '==', mail_id).get();
-                      if (querySnapshot1.empty){   
-                        // If documents exist, it means the mail_id is already in the database
-                        return res.json({ error: 'User never exists' });
-                      }else{
-                        const userCollectionRef = db.collection('Prompt_table');
-                        const userData = {
-                          Bot,Brand,Category,Questions,Search_parameters,Title,mail_id
-                        }
-                        userCollectionRef.add(userData)          
-                        return res.json({
-                          message: 'Data Added'
-                        });
-                      }
-                }else{
-                  console.log('Invalid User ID')
-                  return res.json({error : 'Invalid User'})
-                } 
-             }  
-      }catch(error){
-          return res.json({error: 'Error'});
-        }  
-
 });
 
 // OTP Generation

@@ -9,7 +9,7 @@ const signToken = (payload, option) => {
     first_name: payload.first_name,
     email_id: payload.mail_id,
     Last_name: payload.Last_name,
-    User__id: payload.User_id
+    User__id: payload.User__id
   };
 
   const signOptions = {
