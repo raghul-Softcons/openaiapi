@@ -92,40 +92,51 @@ app.post('/signup', async (req, res) => {
 
 app.post('/signupotp', async (req, res) => {
   try {
-    const { mail_id, otp, first_name, Last_name, Mobile_no, User_id } = req.body;
+    const { mail_id, otp, first_name, last_name, mobile_no } = req.body;
 
     const db = admin.firestore();
     const otpCollectionRef = db.collection('OTP_table');
     const userCollectionRef = db.collection('user_table');
+
+    // Check if the user with the given mail_id already exists
     const querySnapshot1 = await userCollectionRef.where('mail_id', '==', mail_id).get();
     if (!querySnapshot1.empty) {
-      // If documents exist, it means the mail_id is already in the database
       return res.json({ error: 'User already exists' });
     }
+
+    // Retrieve the current maximum User_id from 'user_table'
+    const userQuerySnapshot = await userCollectionRef.orderBy('User_id', 'desc').limit(1).get();
+    let maxUserId = 0;
+    if (!userQuerySnapshot.empty) {
+      maxUserId = userQuerySnapshot.docs[0].data().User_id;
+    }
+
     // Use where method to query based on mail_id in 'OTP_table'
     const querySnapshot = await otpCollectionRef.where('mail_id', '==', mail_id).get();
 
-    // Check if there are any matching documents in 'OTP_table'
     if (querySnapshot.empty) {
       return res.status(404).json({ error: 'User not found' });
     } else {
       const inf = querySnapshot.docs[0].data();
-      const userotp = inf.otp;
-      console.log("UserOtp", userotp);
+      const userOtp = inf.otp;
 
-      if (otp == userotp) {
-        const verification_status = true;
+      if (otp === userOtp) {
+        const verificationStatus = true;
+        const newUserId = maxUserId + 1;
+
         const userData = {
           first_name,
-          Last_name,
+          last_name,
           mail_id,
-          Mobile_no,
-          verification_status,
-          User_id
-        }
-        // Update verification_status in 'user_table'
-        userCollectionRef.add(userData)          
-          return res.status(200).json({ message: 'VALID OTP!!' });         
+          mobile_no,
+          verification_status: verificationStatus,
+          User_id: newUserId
+        };
+
+        // Add the new user to 'user_table'
+        await userCollectionRef.add(userData);
+
+        return res.status(200).json({ message: 'VALID OTP!!' });
       } else {
         console.error('INVALID OTP');
         return res.status(500).json({ error: 'INVALID OTP' });
@@ -227,7 +238,8 @@ app.post('/signinotp', async (req, res) => {
           mail_id,
           first_name: userDoc.first_name,
           Last_name: userDoc.Last_name,
-          User_id: userDoc.User_id
+          User_id: userDoc.User_id,
+          Role_id: userDoc.Role_id
         };
 
         // Sign the payload with a token
@@ -305,7 +317,6 @@ app.post('/addprompt',async(req,res) =>{
 
       try
       {
-
         const authorizationHeader = req.headers.authorization;
         console.log('authorizationHeader',authorizationHeader);
         if (!authorizationHeader){
@@ -322,16 +333,20 @@ app.post('/addprompt',async(req,res) =>{
               const mail_id = decodedToken.payload.email_id;
               const first_name = decodedToken.payload.first_name;
               const Last_name = decodedToken.payload.Last_name;
-              const User_id = decodedToken.payload.User__id;
+              const Role = decodedToken.payload.Role_id;
+              console.log(Role,"Role id");
+              console.log(Last_name,"Last_name");
 
-              if(User_id === '1'){
+
+
+              if(Role == 1){
 
                   const Userdata = {
-                    mail_id,first_name,Last_name,User_id
+                    mail_id,first_name,Last_name,Role
                   }
 
                   console.log("Mail", mail_id);
-                  console.log("Mail", User_id);
+                  console.log("Mail", Role);
                   console.log(decodedToken);
                   const db = admin.firestore();
                   const userCollectionRef = db.collection('user_table');

@@ -1,45 +1,32 @@
-const { Firestore } = require('@google-cloud/firestore');
-const { Console } = require('console');
 const express = require('express');
-
 const app = express();
-const port = 3000;
 
 app.use(express.json());
 
-
-const firestore = new Firestore({
-    projectId: 'howtotalktomyaiui',
-    keyFilename: '/Users/sreelakshmi/Desktop/Raghul/openaiapi/howtotalktomyaiui-29134714127e.json',
-  });
+const axios = require('axios'); // Make sure to install axios using npm install axios
+const port = 3000;
 
 app.post('/try', async (req, res) => {
     try {
-        const userTableRef = firestore.collection('OTP_table');
-        console.log("LLLLLLLLL",userTableRef);
-        try{
-        const snapshot = await userTableRef.get();
-        if (snapshot.empty) {
-          console.log('No documents found in "user_table" collection.');
-          return res.status(404).json({ error: 'No data found in the collection.' });
-      }
+        // Make a request to the /ask API
+        const response = await axios.post('http://localhost:3000/ask'); // Replace with your actual API endpoint
 
-      // Extract data from the first document in the collection
-      const userData = snapshot.docs[0].data();
-      console.log('Data retrieved successfully:', userData);
-
-      return res.json({ userData });
-        }catch (error) {
-        console.error('Firestore query error:', error);
-        return res.status(500).json({ error: 'Internal server error while querying Firestore.' });
-      }          
+        // Handle the response from the /ask API
+        return res.json({
+            message: 'Hello',
+            secondApiMessage: response.data.message,
+        });
     } catch (error) {
-        console.error('Error retrieving data:', error);
-        return res.status(500).json({ error: 'Internal server error while fetching data.' });
+        // Handle errors if the request to /ask fails
+        console.error('Error calling /ask API:', error.message);
+        return res.status(500).json({ error: 'Internal Server Error' });
     }
+});
+
+app.post('/ask', async (req, res) => {
+    return res.json({ message: 'This is the second API' });
 });
 
 app.listen(port, () => {
     console.log(`Server is running at http://localhost:${port}`);
 });
-  
